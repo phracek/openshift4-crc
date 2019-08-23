@@ -30,28 +30,3 @@
     become: true
     when: ansible_os_family == "RedHat"
 
-  - name: Get brew prefix
-    shell: brew --prefix
-    register: brew_prefix
-    when: ansible_os_family == "Darwin"
-
-  - name: Pring brew --prefix
-    debug: msg={{ brew_prefix }}
-
-  - name: Check if hyperkit is installed
-    stat:
-      path: "{{ brew_prefix.stdout }}/opt/bin/hyperkit"
-    register: hyperkit_exist
-
-  - name: Install hyperkit on macOS
-    shell: brew install hyperkit
-    when: ansible_os_family == "Darwin" and hyperkit_exist.stat.exists == false
-
-  - name: Change ownership on /opt/hyperkit/bin/hyperkit
-    file:
-      path: "{{ brew_prefix.stdout }}/opt/hyperkit/bin/hyperkit"
-      owner: root
-      group: wheel
-      mode: u+s
-    become: true
-    when: ansible_os_family == "Darwin"

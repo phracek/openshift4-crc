@@ -1,0 +1,29 @@
+---
+- name: Install RPM packages
+  hosts: all
+  tasks:
+  # file /usr/share/man/man5/idmapd.conf.5.gz from install of nfs-utils-1:2.4.1-0.fc30.x86_64
+  # conflicts with file from package libnfsidmap-1:2.3.3-7.rc2.fc30.x86_64
+  - name: Remove libnfsidmap (dependency problem on man page)
+    dnf:
+      name:
+        - libnfsidmap
+      state: absent
+    become: true
+
+  - name: Installs all RPM packages needed to run OpenShift4 with CRC.
+    dnf:
+      name:
+        - NetworkManager
+        - qemu-kvm
+        - libvirt
+      state: latest
+    become: true
+
+  - name: Check the status of the libvirtd service
+    systemd:
+      state: started
+      name: libvirtd
+      enabled: yes
+    become: true
+

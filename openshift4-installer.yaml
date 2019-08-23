@@ -1,0 +1,56 @@
+---
+- name: Install OpenShift 4 with CRC
+  hosts: all
+
+  tasks:
+    - name: Set architecture for Linux
+      set_fact:
+        crc_download_name: "crc-0.90.0-alpha-linux-amd64"
+      when: ansible_os_family == "RedHat"
+
+    - name: Set architecture for MacOS
+      set_fact:
+        crc_download_name: "crc-0.90.0-alpha-darwin-amd64"
+      when: ansible_os_family == "Darwin"
+
+    - name: Set variable crc_tar_name
+      debug: msg="{{ ansible_env.HOME}}/{{ crc_download_name }}.tar.xz"
+      register: crc_tar_name
+
+    - name: Set variable crc_dir_name
+      debug: msg="{{ ansible_env.HOME }}/{{ crc_download_name }}"
+      register: crc_dir_name
+
+    - name: Check if the latest CRC software exists
+      stat:
+        path: '{{ crc_tar_name.msg }}'
+      register: file_details
+
+    - name: Check if directory with CRC software exists.
+      stat:
+        path: '{{ crc_dir_name.msg }}'
+      register: dir_details
+
+    - name: Get the latest CRC software
+      get_url:
+        url: 'https://github.com/code-ready/crc/releases/download/0.90.0/{{ crc_download_name }}.tar.xz'
+        dest: '{{ crc_tar_name }}'
+      when: file_details.stat.exists == false
+
+    - name: Untar CRC code
+      unarchive:
+        src: '{{ crc_tar_name }}'
+        dest: '{{ ansible_env.HOME }}'
+      when: dir_details.stat.exists == false
+
+    - name: Check for presence ~/.crc directory
+      stat:
+        path: "{{ ansible_env.HOME }}/.crc"
+      register: crc_details
+
+    - name: CRC setup
+      command: "{{ crc_dir_name.msg }}/crc setup"
+      when: crc_details.stat.exists == false
+
+    - name: CRC Start
+      command: "{{ crc_dir_name.msg }}/crc start"

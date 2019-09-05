@@ -1,0 +1,29 @@
+---
+- name: Run OpenShift 4
+  hosts: all
+  vars:
+    version: "1.0.0-beta.3"
+    crc_version: "4.1.11"
+  tasks:
+    - name: Set architecture for Linux
+      set_fact:
+        arch_name: "linux"
+      when: ansible_os_family == "RedHat"
+
+    - name: Set architecture for MacOS
+      set_fact:
+        arch_name: "macos"
+      when: ansible_os_family == "Darwin"
+
+    - name: CRC Start
+      command: "{{ ansible_env.HOME }}/crc-{{ arch_name }}-{{ version }}-amd64/crc start --pull-secret-file {{ ansible_env.HOME }}/crc-{{ arch_name }}-{{ version }}-amd64/pull-secret"
+      async: 1000
+      poll: 0
+      register: crc_sleeper
+
+    - name: 'CRC - check on async task'
+      async_status:
+        jid: "{{ crc_sleeper.ansible_job_id }}
+      register: job_result
+      until: job_result.finished
+      retries: 100

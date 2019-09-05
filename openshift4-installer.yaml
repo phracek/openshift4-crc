@@ -1,25 +1,37 @@
 ---
 - name: Install OpenShift 4 with CRC
   hosts: all
-
+  vars:
+    version: "1.0.0-beta.3"
+    crc_version: "4.1.11"
   tasks:
+    - include_tasks: ./install-rpm-requirements.yaml
+
     - name: Set architecture for Linux
       set_fact:
-        crc_download_name: "crc-0.90.0-alpha-linux-amd64"
+        arch_name: "linux"
       when: ansible_os_family == "RedHat"
 
     - name: Set architecture for MacOS
       set_fact:
-        crc_download_name: "crc-0.90.0-alpha-darwin-amd64"
+        arch_name: "macos"
       when: ansible_os_family == "Darwin"
 
     - name: Set variable crc_tar_name
-      debug: msg="{{ ansible_env.HOME}}/{{ crc_download_name }}.tar.xz"
+      debug: msg="{{ ansible_env.HOME}}/crc-{{ arch_name }}-amd64.tar.xz"
       register: crc_tar_name
 
     - name: Set variable crc_dir_name
-      debug: msg="{{ ansible_env.HOME }}/{{ crc_download_name }}"
+      debug: msg="{{ ansible_env.HOME }}/crc-{{ arch_name }}-amd64"
       register: crc_dir_name
+
+    - name: Check for presence pull-secret file
+      stat:
+        path: "{{ pull_secret }}"
+      register: pull_secret_exist
+    - fail:
+          msg: "'pull-secret' does not exists. Download it from https://cloud.redhat.com/openshift/install/metal/user-provisioned"
+      when: pull_secret_exist.stat.exists == false
 
     - name: Check if the latest CRC software exists
       stat:
@@ -33,24 +45,69 @@
 
     - name: Get the latest CRC software
       get_url:
-        url: 'https://github.com/code-ready/crc/releases/download/0.90.0/{{ crc_download_name }}.tar.xz'
-        dest: '{{ crc_tar_name }}'
+        url: 'https://mirror.openshift.com/pub/openshift-v4/clients/crc/{{ version }}/crc-{{ arch_name }}-amd64.tar.xz'
+        dest: '{{ crc_tar_name.msg }}'
       when: file_details.stat.exists == false
-
-    - name: Untar CRC code
-      unarchive:
-        src: '{{ crc_tar_name }}'
-        dest: '{{ ansible_env.HOME }}'
-      when: dir_details.stat.exists == false
 
     - name: Check for presence ~/.crc directory
       stat:
         path: "{{ ansible_env.HOME }}/.crc"
       register: crc_details
 
+    - name: Create ~/.crc directory
+      file:
+        path: "{{ ansible_env.HOME }}/.crc"
+        state: directory
+      when: dir_details.stat.exists == false
+
+    - name: Check if CRC directory is present
+      stat:
+        path: "{{ ansible_env.HOME }}/crc-{{ arch_name }}-{{ version }}-amd64/"
+      register: crc_dir_exist
+
+    - name: Check for CRC Bundle presence
+      stat:
+        path: "{{ ansible_env.HOME }}/.crc/crc_virtualbox_{{ crc_version }}.crcbundle"
+      register: crc_present
+
+    - name: Get VirtualBox CRC bundle
+      get_url:
+        url: "https://mirror.openshift.com/pub/openshift-v4/clients/crc/{{ version }}/crc_virtualbox_{{ crc_version }}.crcbundle"
+        dest: "{{ ansible_env.HOME }}/.crc/"
+      when: crc_present.stat.exists == false
+
+    - name: Untar CRC code
+      unarchive:
+        src: '{{ crc_tar_name }}'
+        dest: '{{ ansible_env.HOME }}'
+      when: ansible_os_family == "RedHat"
+
+    - name: Gunzip CRC code
+      command: "gunzip -v {{ ansible_env.HOME }}/crc-{{ arch_name }}-amd64.tar.xz"
+      when: ansible_os_family == "Darwin"
+
+    - name: Untar CRC code
+      command: "tar -xvf {{ ansible_env.HOME }}/crc-{{ arch_name }}-amd64.tar -C {{ ansible_env.HOME }}"
+      when: ansible_os_family == "Darwin"
+
+    - name: Delete CRC tar source
+      file:
+        state: absent
+        path: "{{ ansible_env.HOME }}/crc-{{ arch_name }}-amd64.tar"
+
     - name: CRC setup
-      command: "{{ crc_dir_name.msg }}/crc setup"
-      when: crc_details.stat.exists == false
+      command: "{{ ansible_env.HOME }}/crc-{{ arch_name }}-{{ version }}-amd64/crc setup"
+      when: crc_dir_exist.stat.exists == false
+
+    - name: Copy pull-secret to crc directory
+      copy:
+        src: "{{ pull_secret }}"
+        dest: "{{ ansible_env.HOME }}/crc-{{ arch_name }}-{{ version }}-amd64/pull-secret"
 
     - name: CRC Start
-      command: "{{ crc_dir_name.msg }}/crc start"
+      command: "{{ ansible_env.HOME }}/crc-{{ arch_name }}-{{ version }}-amd64/crc start --pull-secret-file {{ ansible_env.HOME }}/crc-{{ arch_name }}-{{ version }}-amd64/pull-secret"
+
+
+# Important links
+# http://cdk-builds.usersys.redhat.com/builds/crc/4.1.9/
+# https://cloud.redhat.com/openshift/install/metal/user-provisioned

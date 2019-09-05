@@ -1,11 +1,10 @@
-.PHONY install_locally vu vd
+.PHONY install_openshift run_openshift
 
-install_locally:
-	ansible-playbook -vv -c local -i localhost, ./install-rpm-packages.yaml
+install_openshift:
 	ansible-playbook -vv -c local -i localhost, ./openshift4-installer.yaml
 
-vu:
-	vagrant up
+run_openshift: install_openshift
+	ansible-playbook -vv -c local -i localhost, ./openshift4-runner.yaml
 
-vd:
-	vagrant down
+stop_openshift:
+	ansible-playbook -vv -c local -i localhost, ./openshift4-stop.yaml

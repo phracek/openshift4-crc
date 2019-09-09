@@ -1,19 +1,8 @@
 ---
 - name: Run OpenShift 4
   hosts: all
-  vars:
-    version: "1.0.0-beta.3"
-    crc_version: "4.1.11"
   tasks:
-    - name: Set architecture for Linux
-      set_fact:
-        arch_name: "linux"
-      when: ansible_os_family == "RedHat"
-
-    - name: Set architecture for MacOS
-      set_fact:
-        arch_name: "macos"
-      when: ansible_os_family == "Darwin"
+    - include_tasks: ./crc-versions.yaml
 
     - name: CRC Start
       command: "{{ ansible_env.HOME }}/crc-{{ arch_name }}-{{ version }}-amd64/crc start --pull-secret-file {{ ansible_env.HOME }}/crc-{{ arch_name }}-{{ version }}-amd64/pull-secret"

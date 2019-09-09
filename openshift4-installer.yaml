@@ -1,29 +1,17 @@
 ---
 - name: Install OpenShift 4 with CRC
   hosts: all
-  vars:
-    version: "1.0.0-beta.3"
-    crc_version: "4.1.11"
   tasks:
+    - include_tasks: ./crc-versions.yaml
     - include_tasks: ./install-rpm-requirements.yaml
 
-    - name: Set architecture for Linux
-      set_fact:
-        arch_name: "linux"
-      when: ansible_os_family == "RedHat"
-
-    - name: Set architecture for MacOS
-      set_fact:
-        arch_name: "macos"
-      when: ansible_os_family == "Darwin"
-
     - name: Set variable crc_tar_name
-      debug: msg="{{ ansible_env.HOME}}/crc-{{ arch_name }}-amd64.tar.xz"
-      register: crc_tar_name
+      set_fact:
+        crc_tar_name: "{{ ansible_env.HOME}}/crc-{{ arch_name }}-amd64.tar.xz"
 
     - name: Set variable crc_dir_name
-      debug: msg="{{ ansible_env.HOME }}/crc-{{ arch_name }}-amd64"
-      register: crc_dir_name
+      set_fact:
+        crc_dir_name: "{{ ansible_env.HOME }}/crc-{{ arch_name }}-amd64"
 
     - name: Check for presence pull-secret file
       stat:
@@ -35,18 +23,18 @@
 
     - name: Check if the latest CRC software exists
       stat:
-        path: '{{ crc_tar_name.msg }}'
+        path: '{{ crc_tar_name }}'
       register: file_details
 
     - name: Check if directory with CRC software exists.
       stat:
-        path: '{{ crc_dir_name.msg }}'
+        path: '{{ crc_dir_name }}'
       register: dir_details
 
     - name: Get the latest CRC software
       get_url:
-        url: 'https://mirror.openshift.com/pub/openshift-v4/clients/crc/{{ version }}/crc-{{ arch_name }}-amd64.tar.xz'
-        dest: '{{ crc_tar_name.msg }}'
+        url: 'https://mirror.openshift.com/pub/openshift-v4/clients/crc/latest/crc-{{ arch_name }}-amd64.tar.xz'
+        dest: '{{ crc_tar_name }}'
       when: file_details.stat.exists == false
 
     - name: Check for presence ~/.crc directory
@@ -72,7 +60,7 @@
 
     - name: Get VirtualBox CRC bundle
       get_url:
-        url: "https://mirror.openshift.com/pub/openshift-v4/clients/crc/{{ version }}/crc_virtualbox_{{ crc_version }}.crcbundle"
+        url: "https://mirror.openshift.com/pub/openshift-v4/clients/crc/latest/crc_virtualbox_{{ crc_version }}.crcbundle"
         dest: "{{ ansible_env.HOME }}/.crc/"
       when: crc_present.stat.exists == false
 

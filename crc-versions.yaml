@@ -1,0 +1,14 @@
+---
+- set_fact:
+    version: "1.0.0-beta.3"
+- set_fact:
+    crc_version: "4.1.11"
+- name: Set architecture for Linux
+  set_fact:
+    arch_name: "linux"
+  when: ansible_os_family == "RedHat"
+
+- name: Set architecture for MacOS
+  set_fact:
+    arch_name: "macos"
+  when: ansible_os_family == "Darwin"

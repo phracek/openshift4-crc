@@ -1,0 +1,8 @@
+---
+- name: Run OpenShift 4
+  hosts: all
+  tasks:
+    - include_tasks: ./crc-versions.yaml
+
+    - name: CRC Start
+      command: "{{ ansible_env.HOME }}/crc-{{ arch_name }}-{{ version }}-amd64/crc stop"

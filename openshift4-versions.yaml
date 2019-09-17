@@ -1,0 +1,5 @@
+---
+- name: Versions OpenShift 4
+  hosts: all
+  tasks:
+    - include_tasks: ./crc-versions.yaml

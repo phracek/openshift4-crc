@@ -12,3 +12,20 @@
   set_fact:
     arch_name: "macos"
   when: ansible_os_family == "Darwin"
+
+- name: Get content of 'https://mirror.openshift.com/pub/openshift-v4/clients/crc/latest'
+  get_url:
+    url: https://mirror.openshift.com/pub/openshift-v4/clients/crc/latest/sha256sum.txt
+    dest: /tmp/sha256sum.txt
+    mode: '0664'
+
+- name: Get crc_virtualbox_*.crcbundle filename
+  shell: "cat sha256sum.txt| grep crc_virtualbox | cut -f3 -d' ' | cut -f2 -d'/'"
+  register: crc_file_name
+
+- file:
+    path: /tmp/sha256sum.txt
+    state: absent
+
+- name: CRC bundle file name is
+  debug: msg="{{ crc_file_name.stdout }}"

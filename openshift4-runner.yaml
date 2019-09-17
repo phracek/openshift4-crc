@@ -6,13 +6,3 @@
 
     - name: CRC Start
       command: "{{ ansible_env.HOME }}/crc-{{ arch_name }}-{{ version }}-amd64/crc start --pull-secret-file {{ ansible_env.HOME }}/crc-{{ arch_name }}-{{ version }}-amd64/pull-secret"
-      async: 1000
-      poll: 0
-      register: crc_sleeper
-
-    - name: 'CRC - check on async task'
-      async_status:
-        jid: "{{ crc_sleeper.ansible_job_id }}
-      register: job_result
-      until: job_result.finished
-      retries: 100

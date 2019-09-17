@@ -11,7 +11,7 @@
 
     - name: Set variable crc_dir_name
       set_fact:
-        crc_dir_name: "{{ ansible_env.HOME }}/crc-{{ arch_name }}-amd64"
+        crc_dir_name: "{{ ansible_env.HOME }}/crc-{{ arch_name }}-{{ version }}-amd64"
 
     - name: Check for presence pull-secret file
       stat:
@@ -35,7 +35,7 @@
       get_url:
         url: 'https://mirror.openshift.com/pub/openshift-v4/clients/crc/latest/crc-{{ arch_name }}-amd64.tar.xz'
         dest: '{{ crc_tar_name }}'
-      when: file_details.stat.exists == false
+      when: dir_details.stat.exists == false
 
     - name: Check for presence ~/.crc directory
       stat:
@@ -46,21 +46,16 @@
       file:
         path: "{{ ansible_env.HOME }}/.crc"
         state: directory
-      when: dir_details.stat.exists == false
-
-    - name: Check if CRC directory is present
-      stat:
-        path: "{{ ansible_env.HOME }}/crc-{{ arch_name }}-{{ version }}-amd64/"
-      register: crc_dir_exist
+      when: crc_details.stat.exists == false
 
     - name: Check for CRC Bundle presence
       stat:
-        path: "{{ ansible_env.HOME }}/.crc/crc_virtualbox_{{ crc_version }}.crcbundle"
+        path: "{{ ansible_env.HOME }}/.crc/{{ crc_file_name.stdout }}"
       register: crc_present
 
     - name: Get VirtualBox CRC bundle
       get_url:
-        url: "https://mirror.openshift.com/pub/openshift-v4/clients/crc/latest/crc_virtualbox_{{ crc_version }}.crcbundle"
+        url: "https://mirror.openshift.com/pub/openshift-v4/clients/crc/latest/{{ crc_file_name.stdout }}"
         dest: "{{ ansible_env.HOME }}/.crc/"
       when: crc_present.stat.exists == false
 
@@ -68,34 +63,21 @@
       unarchive:
         src: '{{ crc_tar_name }}'
         dest: '{{ ansible_env.HOME }}'
-      when: ansible_os_family == "RedHat"
+      when: ansible_os_family == "RedHat" and dir_details.stat.exists == false
 
     - name: Gunzip CRC code
       command: "gunzip -v {{ ansible_env.HOME }}/crc-{{ arch_name }}-amd64.tar.xz"
-      when: ansible_os_family == "Darwin"
+      when: ansible_os_family == "Darwin" and dir_details.stat.exists == false
 
     - name: Untar CRC code
       command: "tar -xvf {{ ansible_env.HOME }}/crc-{{ arch_name }}-amd64.tar -C {{ ansible_env.HOME }}"
-      when: ansible_os_family == "Darwin"
+      when: ansible_os_family == "Darwin" and dir_details.stat.exists == false
 
     - name: Delete CRC tar source
       file:
         state: absent
         path: "{{ ansible_env.HOME }}/crc-{{ arch_name }}-amd64.tar"
+      when: dir_details.stat.exists == false
 
     - name: CRC setup
       command: "{{ ansible_env.HOME }}/crc-{{ arch_name }}-{{ version }}-amd64/crc setup"
-      when: crc_dir_exist.stat.exists == false
-
-    - name: Copy pull-secret to crc directory
-      copy:
-        src: "{{ pull_secret }}"
-        dest: "{{ ansible_env.HOME }}/crc-{{ arch_name }}-{{ version }}-amd64/pull-secret"
-
-    - name: CRC Start
-      command: "{{ ansible_env.HOME }}/crc-{{ arch_name }}-{{ version }}-amd64/crc start --pull-secret-file {{ ansible_env.HOME }}/crc-{{ arch_name }}-{{ version }}-amd64/pull-secret"
-
-
-# Important links
-# http://cdk-builds.usersys.redhat.com/builds/crc/4.1.9/
-# https://cloud.redhat.com/openshift/install/metal/user-provisioned

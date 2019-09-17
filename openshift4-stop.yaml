@@ -4,5 +4,8 @@
   tasks:
     - include_tasks: ./crc-versions.yaml
 
-    - name: CRC Start
+    - name: CodeReadyContainers stop
       command: "{{ ansible_env.HOME }}/crc-{{ arch_name }}-{{ version }}-amd64/crc stop"
+
+    - name: CodeReadyContainers delete
+      command: "{{ ansible_env.HOME }}/crc-{{ arch_name }}-{{ version }}-amd64/crc delete"
